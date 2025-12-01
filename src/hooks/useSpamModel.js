@@ -1,9 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import Papa from 'papaparse';
 
-/**
- * Multinomial Naive Bayes implementation for spam detection
- */
 class NaiveBayesSpamDetector {
   constructor() {
     this.spamWordCounts = {};
@@ -16,9 +13,6 @@ class NaiveBayesSpamDetector {
     this.isTrained = false;
   }
 
-  /**
-   * Tokenize text into words (lowercase, alphanumeric only)
-   */
   tokenize(text) {
     return text
       .toLowerCase()
@@ -27,11 +21,7 @@ class NaiveBayesSpamDetector {
       .filter(word => word.length > 0);
   }
 
-  /**
-   * Train the model with spam/ham messages
-   */
   train(messages, labels) {
-    // Reset counts
     this.spamWordCounts = {};
     this.hamWordCounts = {};
     this.spamTotalWords = 0;
@@ -40,7 +30,6 @@ class NaiveBayesSpamDetector {
     this.hamMessages = 0;
     this.vocabulary = new Set();
 
-    // Count words in each category
     for (let i = 0; i < messages.length; i++) {
       const message = messages[i];
       const label = labels[i];
@@ -66,11 +55,8 @@ class NaiveBayesSpamDetector {
     this.isTrained = true;
   }
 
-  /**
-   * Calculate log probability of a word given a category (with Laplace smoothing)
-   */
   getWordProbability(word, isSpam) {
-    const alpha = 1; // Laplace smoothing parameter
+    const alpha = 1;
     const vocabSize = this.vocabulary.size;
 
     if (isSpam) {
@@ -84,10 +70,6 @@ class NaiveBayesSpamDetector {
     }
   }
 
-  /**
-   * Predict if a message is spam or ham
-   * Returns: { label: 'spam' | 'ham', confidence: number (0-1) }
-   */
   predict(text) {
     if (!this.isTrained) {
       throw new Error('Model not trained yet');
@@ -98,12 +80,10 @@ class NaiveBayesSpamDetector {
       return { label: 'ham', confidence: 0.5 };
     }
 
-    // Prior probabilities
     const totalMessages = this.spamMessages + this.hamMessages;
     const logP_spam = Math.log(this.spamMessages / totalMessages);
     const logP_ham = Math.log(this.hamMessages / totalMessages);
 
-    // Calculate log probabilities for each word
     let logProbSpam = logP_spam;
     let logProbHam = logP_ham;
 
@@ -112,8 +92,6 @@ class NaiveBayesSpamDetector {
       logProbHam += this.getWordProbability(token, false);
     });
 
-    // Convert log probabilities to regular probabilities
-    // Use log-sum-exp trick to avoid underflow
     const maxLog = Math.max(logProbSpam, logProbHam);
     const expSpam = Math.exp(logProbSpam - maxLog);
     const expHam = Math.exp(logProbHam - maxLog);
@@ -129,9 +107,6 @@ class NaiveBayesSpamDetector {
   }
 }
 
-/**
- * Custom hook for spam detection model
- */
 export function useSpamModel() {
   const [model, setModel] = useState(new NaiveBayesSpamDetector());
   const [isTraining, setIsTraining] = useState(false);
@@ -139,9 +114,6 @@ export function useSpamModel() {
   const [isReady, setIsReady] = useState(false);
   const [error, setError] = useState(null);
 
-  /**
-   * Fetch and parse CSV data
-   */
   const fetchData = useCallback(async () => {
     try {
       const response = await fetch(
@@ -173,9 +145,6 @@ export function useSpamModel() {
     }
   }, []);
 
-  /**
-   * Train the model with fetched data
-   */
   const trainModel = useCallback(async () => {
     setIsTraining(true);
     setTrainingProgress(0);
@@ -183,18 +152,15 @@ export function useSpamModel() {
     setIsReady(false);
 
     try {
-      // Fetch data
       setTrainingProgress(10);
       const data = await fetchData();
 
-      // Process data
       setTrainingProgress(30);
       const messages = [];
       const labels = [];
 
       data.forEach((row, index) => {
         if (row.v1 && row.v2) {
-          // Map 'ham'/'spam' to labels, handle both string and numeric
           const label = row.v1.toLowerCase().trim();
           if (label === 'spam' || label === 'ham') {
             messages.push(row.v2);
@@ -202,7 +168,6 @@ export function useSpamModel() {
           }
         }
 
-        // Update progress
         if (index % 100 === 0) {
           setTrainingProgress(30 + (index / data.length) * 50);
         }
@@ -212,7 +177,6 @@ export function useSpamModel() {
         throw new Error('No valid data found in CSV');
       }
 
-      // Train model
       setTrainingProgress(80);
       const newModel = new NaiveBayesSpamDetector();
       newModel.train(messages, labels);
@@ -228,16 +192,10 @@ export function useSpamModel() {
     }
   }, [fetchData]);
 
-  /**
-   * Auto-train on mount
-   */
   useEffect(() => {
     trainModel();
   }, [trainModel]);
 
-  /**
-   * Predict function
-   */
   const predict = useCallback((text) => {
     if (!isReady) {
       return { label: 'ham', confidence: 0, error: 'Model not ready' };
