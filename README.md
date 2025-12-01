@@ -79,7 +79,5 @@ The app implements Multinomial Naive Bayes with:
 └── postcss.config.js
 ```
 
-## License
 
-MIT
 
